@@ -51,33 +51,22 @@ jobs:
       with:
         context: .
         file: ./Dockerfile
-        push: false
+        push: true
         platforms: linux/amd64,linux/arm64
         tags: ghcr.io/wikmat02/progapchzad2:latest
         cache-from: type=registry,ref=s99623/cache-chmurazad2
         cache-to: type=registry,ref=s99623/cache-chmurazad2,mode=max
-        outputs: type=oci,dest=/tmp/image.tar
 
     # Krok 7 – zapisanie nazwy obrazu do zmiennej środowiskowej
     - name: Zapisz metadane obrazu
       id: image-metadata
-      run: echo "IMAGE=ghcr.io/WikMat02/progapchzad2:latest" >> $GITHUB_ENV
+      run: echo "IMAGE=ghcr.io/wikmat02/progapchzad2:latest" >> $GITHUB_ENV
 
-    # Krok 8 – załaduj obraz lokalnie do Dockera (do skanowania)
-    - name: Załaduj obraz Dockera
-      run: docker load -i /tmp/image.tar
-
-    # Krok 9 – skanowanie obrazu pod kątem luk bezpieczeństwa (Trivy)
+    # Krok 8 – skanowanie obrazu pod kątem luk bezpieczeństwa (Trivy)
     - name: Skanuj obraz pod kątem luk (Trivy)
       uses: aquasecurity/trivy-action@master
       with:
-        image-ref: ghcr.io/WikMat02/progapchzad2:latest
+        image-ref: ghcr.io/wikmat02/progapchzad2:latest
         exit-code: 1
         severity: CRITICAL,HIGH
         format: table
-
-    # Krok 10 – wypchnięcie obrazu do GHCR jeśli skan się powiedzie
-    - name: Wyślij obraz do GHCR (jeśli OK)
-      if: success()
-      run: |
-        docker push ghcr.io/WikMat02/progapchzad2:latest
