@@ -56,7 +56,7 @@ jobs:
         tags: ghcr.io/wikmat02/progapchzad2:latest
         cache-from: type=registry,ref=s99623/cache-chmurazad2
         cache-to: type=registry,ref=s99623/cache-chmurazad2,mode=max
-        outputs: type=docker,dest=/tmp/image.tar
+        outputs: type=oci,dest=/tmp/image.tar
 
     # Krok 7 – zapisanie nazwy obrazu do zmiennej środowiskowej
     - name: Zapisz metadane obrazu
