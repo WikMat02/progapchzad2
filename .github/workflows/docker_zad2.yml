@@ -53,7 +53,7 @@ jobs:
         file: ./Dockerfile
         push: false
         platforms: linux/amd64,linux/arm64
-        tags: ghcr.io/WikMat02/progapchzad2:latest
+        tags: ghcr.io/wikmat02/progapchzad2:latest
         cache-from: type=registry,ref=s99623/cache-chmurazad2
         cache-to: type=registry,ref=s99623/cache-chmurazad2,mode=max
         outputs: type=docker,dest=/tmp/image.tar
