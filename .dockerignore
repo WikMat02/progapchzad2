@@ -1,0 +1,10 @@
+# Ignoruj katalogi binarne, logi i zbudowane pliki
+.docker/
+*.exe
+*.log
+*.out
+*.bin
+vendor/
+.idea/
+.vscode/
+*.env

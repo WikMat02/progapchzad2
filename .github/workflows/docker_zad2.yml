@@ -1,0 +1,83 @@
+# Nazwa workflow
+name: Budowanie i Wysyłanie Obrazu Dockera + Skanowanie CVE
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Buduj i Skanuj Obraz
+    runs-on: ubuntu-latest
+
+    permissions:
+      packages: write
+      contents: read
+      security-events: write
+
+    steps:
+    # Krok 1 – pobranie kodu z repozytorium
+    - name: Pobierz kod źródłowy
+      uses: actions/checkout@v4
+
+    # Krok 2 – konfiguracja QEMU (dla architektur ARM)
+    - name: Skonfiguruj QEMU
+      uses: docker/setup-qemu-action@v3
+
+    # Krok 3 – konfiguracja Docker Buildx
+    - name: Skonfiguruj Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    # Krok 4 – logowanie do DockerHub (potrzebne do cache)
+    - name: Zaloguj się do DockerHub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    # Krok 5 – logowanie do GitHub Container Registry
+    - name: Zaloguj się do GHCR (GitHub Container Registry)
+      uses: docker/login-action@v2
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    # Krok 6 – budowanie obrazu Dockera i użycie cache
+    - name: Zbuduj obraz Dockera (wieloarchitekturowy) z cache
+      id: build-image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile
+        push: false
+        platforms: linux/amd64,linux/arm64
+        tags: ghcr.io/WikMat02/ProgApChZAD2:latest
+        cache-from: type=registry,ref=s99623/cache-chmurazad2
+        cache-to: type=registry,ref=s99623/cache-chmurazad2,mode=max
+        outputs: type=docker,dest=/tmp/image.tar
+
+    # Krok 7 – zapisanie nazwy obrazu do zmiennej środowiskowej
+    - name: Zapisz metadane obrazu
+      id: image-metadata
+      run: echo "IMAGE=ghcr.io/WikMat02/ProgApChZAD2:latest" >> $GITHUB_ENV
+
+    # Krok 8 – załaduj obraz lokalnie do Dockera (do skanowania)
+    - name: Załaduj obraz Dockera
+      run: docker load -i /tmp/image.tar
+
+    # Krok 9 – skanowanie obrazu pod kątem luk bezpieczeństwa (Trivy)
+    - name: Skanuj obraz pod kątem luk (Trivy)
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ghcr.io/WikMat02/ProgApChZAD2:latest
+        exit-code: 1
+        severity: CRITICAL,HIGH
+        format: table
+
+    # Krok 10 – wypchnięcie obrazu do GHCR jeśli skan się powiedzie
+    - name: Wyślij obraz do GHCR (jeśli OK)
+      if: success()
+      run: |
+        docker push ghcr.io/WikMat02/ProgApChZAD2:latest

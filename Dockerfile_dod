@@ -1,0 +1,33 @@
+# Etap 1 - Budowanie aplikacji
+# Wykorzystanie golang:alpine jako obrazu bazowego dla kompilacji
+FROM --platform=$BUILDPLATFORM golang:1.23.8-alpine AS builder
+
+LABEL org.opencontainers.image.authors="Wiktoria Matacz"
+LABEL org.opencontainers.image.source="https://github.com/WikMat02/ProgApChZAD1"
+
+WORKDIR /src
+
+# Instalacja zależności - git oraz wymagane certyfikaty
+RUN apk add --no-cache git ca-certificates && update-ca-certificates
+
+# Wczytanie kodu bezpośrednio z GitHub przy użyciu mount=ssh i mount=secret
+RUN --mount=type=ssh \
+    --mount=type=secret,id=github_token \
+    git clone https://github.com/WikMat02/ProgApChZAD1 . && \
+    go mod download && \
+    go build -o /out/app_pogoda .
+
+# Etap 2 - Zbudowanie minimalnego obrazu
+FROM scratch
+
+# Kopiowanie skompilowanej aplikacji oraz certyfikatów SSL
+COPY --from=builder /out/app_pogoda /app_pogoda
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+
+EXPOSE 8080
+
+# Healthcheck do monitorowania stanu kontenera
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+  CMD wget --spider -q http://localhost:8080/ || exit 1
+
+ENTRYPOINT ["/app_pogoda"]
